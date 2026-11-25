@@ -44,11 +44,9 @@
       <li><span class="archive-dot carousel" aria-hidden="true"></span>Карусели</li>
       <li><span class="archive-dot post" aria-hidden="true"></span>Посты</li>
     </ul>
-    <button type="button" class="archive-primary archive-table-cta" data-show-table>Таблица для клиента <span aria-hidden="true">→</span></button>
   </section>
 
   <section data-view="day" aria-labelledby="archive-day-title" hidden>
-    <button type="button" class="archive-back" data-back-month>‹ К календарю</button>
     <header class="archive-heading">
       <div><h2 id="archive-day-title" data-day-title></h2><p class="archive-note" data-day-note></p></div>
       <button type="button" class="archive-primary" data-add aria-expanded="false">+ Добавить</button>
@@ -67,7 +65,8 @@
         <button type="button" data-cancel>Отмена</button>
       </div>
     </form>
-    <div class="archive-columns">
+    <p data-empty-day class="archive-empty" hidden>На этот день ничего не запланировано.</p>
+    <div class="archive-columns" data-day-columns>
       <section class="archive-lane story">
         <h3>Сторис <span data-story-count></span></h3>
         <div class="archive-cards" data-stories></div>
@@ -77,6 +76,7 @@
         <div class="archive-cards" data-publications></div>
       </section>
     </div>
+    <button type="button" class="archive-primary archive-table-cta" data-show-table>Таблица для клиента <span aria-hidden="true">→</span></button>
   </section>
 
   <section data-view="script" aria-labelledby="archive-script-title" hidden>
@@ -473,8 +473,8 @@
     --line: #763487;
     --text: #fff6fd;
     --subtle: #f4c9f2;
-    --story: #cbff19;
-    --reel: #ff4ba9;
+    --story: #75e8ff;
+    --reel: #cbff19;
     --carousel: #bb74ff;
     --post: #e8b4ff;
     --hot-pink: linear-gradient(160deg, #ff78c6 0%, #ff31a0 17%, #df006a 69%, #c60060);
@@ -742,41 +742,16 @@
   #planner-kp .reel { --format-surface: #5d1347; }
   #planner-kp .carousel { --format-surface: #4d1e66; }
   #planner-kp .post { --format-surface: #4d285c; }
-  @media (min-width: 790px) {
-    #planner-kp:is([data-current-view="month"], [data-current-view="day"]) {
-      display: grid;
-      grid-template-columns: minmax(0, 2.35fr) minmax(218px, 1fr);
-      align-items: start;
-      gap: 0 clamp(12px, 1.8vw, 23px);
-    }
-    #planner-kp .archive-header { grid-column: 1 / -1; }
-    #planner-kp [data-view="day"] {
-      min-width: 0;
-      padding: clamp(10px, 1.6vw, 16px);
-      border: 1px solid #ad4dba;
-      border-radius: 21px;
-      background: linear-gradient(158deg, #55205e, #300a39 58%);
-      box-shadow: inset 0 1px 0 #cc68d853;
-    }
-    #planner-kp [data-view="day"] [data-back-month] { display: none; }
-    #planner-kp [data-view="day"] h2 { font-size: clamp(21px, 2.4vw, 28px); }
-    #planner-kp [data-view="day"] .archive-columns { grid-template-columns: minmax(0, 1fr); gap: 8px; }
-    #planner-kp [data-view="day"] .archive-lane { padding: 7px; }
-    #planner-kp [data-view="day"] .archive-cover { display: none; }
-    #planner-kp [data-view="day"] .archive-entry {
-      grid-template-columns: 65px minmax(0, 1fr);
-      align-items: center;
-      gap: 5px;
-      min-height: 42px;
-      padding: 4px 6px;
-      font-size: 13px;
-    }
-    #planner-kp [data-view="day"] .archive-entry small:last-child { display: none; }
+  #planner-kp [data-view="day"] {
+    margin-top: 16px;
+    padding: clamp(10px, 1.6vw, 16px);
+    border: 1px solid #ad4dba;
+    border-radius: 21px;
+    background: linear-gradient(158deg, #55205e, #300a39 58%);
   }
-  @media (max-width: 789px) {
-    #planner-kp[data-current-view="month"] [data-view="day"],
-    #planner-kp[data-current-view="day"] [data-view="month"] { display: none; }
-  }
+  #planner-kp [data-view="day"] h2 {font-size:clamp(20px, 3vw, 27px);}
+  #planner-kp .archive-columns {grid-template-columns: repeat(auto-fit,minmax(min(100%,230px),1fr));}
+  #planner-kp .archive-cover {height:clamp(80px,24vw,130px);object-fit:contain;}
   @media (max-width: 520px) {
     #planner-kp .archive-brand { font-size: clamp(15px, 4.2vw, 21px); }
     #planner-kp .archive-brand-icon { width: 34px; height: 32px; font-size: 18px; }
@@ -1310,7 +1285,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
   const dayFormat = new Intl.DateTimeFormat('ru-RU', {weekday: 'long', day: 'numeric', month: 'long'});
   const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
   const capitalize = text => text[0].toUpperCase() + text.slice(1);
-  const wideScreen = window.matchMedia('(min-width: 790px)');
   const today = new Date();
   let selected = new Date();
   let month = new Date(selected.getFullYear(), selected.getMonth(), 1);
@@ -1565,10 +1539,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
         calendar.querySelector('[aria-pressed="true"]')?.setAttribute('aria-pressed', 'false');
         button.setAttribute('aria-pressed', 'true');
         renderDay();
-        if (!wideScreen.matches) {
-          show('day');
-          find('back-month').focus();
-        }
       });
       calendar.append(button);
     }
@@ -1584,11 +1554,13 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     const {note, items} = record(selected);
     find('day-title').textContent = capitalize(dayFormat.format(selected));
     find('day-note').textContent = note;
+    find('empty-day').hidden = Boolean(items.length || note);
+    find('day-columns').hidden = !items.length;
     const sequence = orderedItems(items);
     const stories = sequence.filter(({item}) => item.format === 'Сторис');
     const publications = sequence.filter(({item}) => item.format !== 'Сторис');
-    renderLane(find('stories'), find('story-count'), stories, items, 'Нет сторис');
-    renderLane(find('publications'), find('publication-count'), publications, items, 'Нет публикаций');
+    renderLane(find('stories'), find('story-count'), stories, items);
+    renderLane(find('publications'), find('publication-count'), publications, items);
   }
 
   function orderedItems(items) {
@@ -1598,8 +1570,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     })));
   }
 
-  function renderLane(list, count, entries, items, emptyText) {
+  function renderLane(list, count, entries, items) {
     list.replaceChildren();
+    list.closest('.archive-lane').hidden = !entries.length;
     count.textContent = entries.length ? String(entries.length) : '';
     for (const {item, label} of entries) {
       const format = formats.find(format => format.name === item.format);
@@ -1613,6 +1586,15 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
         image.src = cover.url;
         image.alt = '';
         card.append(image);
+      } else {
+        const video = media.find(entry => entry.kind === 'video');
+        if (video) thumbnail(video).then(preview => {
+          if (!preview || !card.isConnected) return;
+          const image = element('img', 'archive-cover');
+          image.alt = '';
+          image.src = preview.data;
+          card.prepend(image);
+        });
       }
       card.append(element('small', '', label + (item.example ? ' · Пример' : '')));
       card.append(element('strong', '', item.title));
@@ -1620,7 +1602,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
       card.addEventListener('click', () => openScript(item, label, format.className));
       list.append(card);
     }
-    if (!entries.length) list.append(element('p', 'archive-empty', emptyText));
   }
 
   function fileMedia(file) {
@@ -2097,12 +2078,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     renderMonth();
     renderDay();
     show('month');
-  });
-  find('back-month').addEventListener('click', () => {
-    closeForm();
-    renderMonth();
-    show('month');
-    calendar.querySelector('[data-date="' + key(selected) + '"]')?.focus();
   });
   function onFormAction(target, handle) {
     target.addEventListener('submit', handle);
