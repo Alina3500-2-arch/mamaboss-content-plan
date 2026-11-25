@@ -1360,14 +1360,34 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
   function snapshot() {
     return {version:1, clients:Array.from(client.options, o => ({id:o.value,name:o.text})), plans, selectedClient:client.value};
   }
-  async function savePlan() {
+  let pendingSave = Promise.resolve();
+  const fileBytes = new WeakMap();
+  function savePlan() {
+    const state = snapshot();
+    const copy = structuredClone(state);
+    const files = [];
+    for (const [id,days] of Object.entries(state.plans)) for (const [date,day] of Object.entries(days)) {
+      day.items.forEach((item,index) => (item.files || []).forEach((file,i) => {
+        if (!fileBytes.has(file)) fileBytes.set(file,file.arrayBuffer());
+        files.push(fileBytes.get(file).then(bytes => {
+          copy.plans[id][date].items[index].files[i]={name:file.name,type:file.type,bytes};
+        }));
+      }));
+    }
+    const prepared=Promise.all(files);
+    prepared.catch(()=>{});
+    pendingSave=pendingSave.then(()=>storePlan(copy,prepared));
+    return pendingSave;
+  }
+  async function storePlan(copy,prepared) {
     const db = await database;
     if (!db) { find('storage-status').textContent = 'Для хранения на устройстве открой приложение в Safari. Здесь можно сохранить копию.'; return; }
     try {
+      await prepared;
       const tx = db.transaction('data','readwrite');
       await new Promise((resolve,reject) => {
         tx.oncomplete=resolve; tx.onabort=reject;
-        tx.objectStore('data').put(snapshot(),'plan');
+        tx.objectStore('data').put(copy,'plan');
       });
       find('storage-status').textContent='';
     } catch { find('storage-status').textContent='Автосохранение не удалось. Сохрани копию в «Файлы».'; }
@@ -1380,6 +1400,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
       req.onsuccess=()=>resolve(req.result); req.onerror=()=>resolve(null);
     });
     if (!saved?.clients?.length) return;
+    for (const days of Object.values(saved.plans)) for (const day of Object.values(days)) {
+      for (const item of day.items) item.files=(item.files||[]).map(f=>f.bytes ? new File([f.bytes],f.name,{type:f.type}) : f);
+    }
     Object.assign(plans,saved.plans);
     client.replaceChildren(...saved.clients.map(c=>new Option(c.name,c.id)));
     client.value=saved.selectedClient;
@@ -1430,8 +1453,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
         const exists=Array.from(client.options).some(o=>o.text===c.name);
         client.add(new Option(c.name+(exists?' · копия':''),c.id)); plans[c.id]=c.days;
       }
-      client.value=imported[0].id;
-      const first=Object.keys(imported[0].days).sort()[0];
+      const restored=imported[Math.max(0,copy.clients.findIndex(c=>c.id===copy.selectedClient))];
+      client.value=restored.id;
+      const first=Object.keys(restored.days).sort()[0];
       if(first){selected=new Date(first+'T12:00:00');month=new Date(selected.getFullYear(),selected.getMonth(),1);}
       closeForm();renderMonth();renderDay();show('month');await savePlan();
       status.textContent='Клиенты из копии добавлены.';
